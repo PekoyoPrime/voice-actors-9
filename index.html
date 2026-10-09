@@ -65,7 +65,7 @@ footer{text-align:center;padding:0 16px 28px;color:var(--muted);font-size:.8rem}
   <section class="panel">
     <h2>あなたを構成する9人</h2>
     <div class="grid" id="grid" aria-label="声優を選ぶ3×3グリッド"></div>
-    <p class="hint">マスを選んでから右側の候補を追加できます。写真はWikipediaから取得できる場合に表示されます。</p>
+    <p class="hint">マスを選んでから声優を検索してください。候補をクリックすると確認ウィンドウなしで追加されます。</p>
     <div class="actions">
       <button class="primary" id="saveBtn">画像を保存（PNG）</button>
       <button id="shareBtn">共有リンクを作成</button>
@@ -77,40 +77,36 @@ footer{text-align:center;padding:0 16px 28px;color:var(--muted);font-size:.8rem}
   <section class="panel">
     <h2>声優を探す</h2>
     <div class="searchrow">
-      <input id="search" type="search" placeholder="声優名で検索（例：花澤香菜）" autocomplete="off">
+      <input id="search" type="search" list="voiceSuggestions" placeholder="声優名で検索（例：花澤香菜）" autocomplete="on">
+      <datalist id="voiceSuggestions"></datalist>
       <button id="searchBtn" class="primary">検索</button>
     </div>
     <div class="status" id="searchStatus" role="status">候補から選ぶか、声優名を検索してください。</div>
     <div class="results" id="results"></div>
     <div class="actions">
-      <button id="popularBtn" class="secondary">人気声優の候補を表示</button>
+      <button id="popularFemaleBtn" class="secondary">人気声優（女性）</button>
+      <button id="popularMaleBtn" class="secondary">人気声優（男性）</button>
     </div>
-    <p class="hint">画像が表示されない場合は、Wikipediaに人物画像が登録されていない可能性があります。</p>
+    <p class="hint">写真が見つからない場合は「Google画像検索」から候補を確認できます。Google画像検索の写真を自動取得するにはAPIキー等が必要なため、このサイトでは検索結果へのリンクを表示します。</p>
   </section>
 </main>
-<footer>個人向けファンツールの試作版。写真の権利は各掲載元の利用条件に従ってください。</footer>
-<div class="modalback" id="modalBack">
-  <div class="modal">
-    <h3 id="modalTitle">マスを選択</h3>
-    <p>この位置に声優を追加します。すでに選択済みの声優は別の位置に移動します。</p>
-    <div class="actions">
-      <button id="cancelModal">キャンセル</button>
-      <button class="primary" id="confirmModal">この位置に追加</button>
-    </div>
-  </div>
-</div>
+<footer>ファン向け試作ツール。写真の権利・利用条件は各掲載元に従ってください。</footer>
 <div id="exportStage" aria-hidden="true">
   <div class="export-title">私を構成した9人の声優</div>
   <div class="export-grid" id="exportGrid"></div>
 </div>
 <script>
-const popular = [
+const popularFemale = [
 "花澤香菜","早見沙織","悠木碧","沢城みゆき","釘宮理恵","水瀬いのり","上坂すみれ","佐倉綾音","雨宮天",
 "内田真礼","東山奈央","小倉唯","高橋李依","鬼頭明里","羊宮妃那","石見舞菜香","楠木ともり","伊藤美来",
+"朴璐美","林原めぐみ","田村ゆかり","堀江由衣","坂本真綾","三石琴乃","緒方恵美","甲斐田裕子","ファイルーズあい"
+];
+const popularMale = [
 "中村悠一","杉田智和","神谷浩史","宮野真守","梶裕貴","松岡禎丞","花江夏樹","内山昂輝","岡本信彦",
 "小野大輔","津田健次郎","石田彰","子安武人","諏訪部順一","関智一","櫻井孝宏","福山潤","島﨑信長",
-"朴璐美","林原めぐみ","田村ゆかり","堀江由衣","坂本真綾","三石琴乃","緒方恵美","甲斐田裕子","大塚明夫"
+"大塚明夫","下野紘","梅原裕一郎","江口拓也","小林千晃","浦和希","古川慎","細谷佳正","緑川光"
 ];
+const popular = [...popularFemale, ...popularMale];
 const gridEl=document.getElementById('grid'), resultsEl=document.getElementById('results');
 const searchEl=document.getElementById('search'), searchStatus=document.getElementById('searchStatus');
 let slots=Array(9).fill(null), activeSlot=0, pendingActor=null, actorCache=new Map();
@@ -118,13 +114,13 @@ const placeholder = name => 'data:image/svg+xml;charset=UTF-8,'+encodeURICompone
 function escapeXml(s){return String(s).replace(/[<>&'"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]));}
 async function getActor(name){
  if(actorCache.has(name)) return actorCache.get(name);
- let actor={name, image:placeholder(name), page:''};
+ let actor={name, image:placeholder(name), page:'', imageFound:false, googleUrl:'https://www.google.com/search?tbm=isch&q='+encodeURIComponent(name+' 声優')};
  try{
    const url='https://ja.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch='+encodeURIComponent(name+' 声優')+'&gsrnamespace=0&gsrlimit=8&prop=pageimages|info&piprop=thumbnail&pithumbsize=360&inprop=url&format=json&origin=*';
    const r=await fetch(url); if(!r.ok) throw new Error('Wikipedia API');
    const data=await r.json(); const pages=Object.values(data.query?.pages||{});
    const exact=pages.find(p=>p.title===name) || pages.find(p=>p.title.includes(name)) || pages[0];
-   if(exact){actor.page=exact.fullurl||('https://ja.wikipedia.org/wiki/'+encodeURIComponent(exact.title));if(exact.thumbnail?.source)actor.image=exact.thumbnail.source;}
+   if(exact){actor.page=exact.fullurl||('https://ja.wikipedia.org/wiki/'+encodeURIComponent(exact.title));if(exact.thumbnail?.source){actor.image=exact.thumbnail.source;actor.imageFound=true;}}
  }catch(e){}
  actorCache.set(name,actor);return actor;
 }
@@ -147,13 +143,19 @@ function actorButton(actor){
  const b=document.createElement('button');b.className='result';b.type='button';
  const img=document.createElement('img');img.src=actor.image;img.alt='';
  const meta=document.createElement('span');meta.className='meta';const strong=document.createElement('strong');strong.textContent=actor.name;meta.appendChild(strong);
- if(actor.page){const small=document.createElement('small');small.textContent='Wikipediaの人物ページあり';meta.appendChild(small);}
+ const small=document.createElement('small');small.textContent=actor.imageFound?'Wikipediaの写真':'写真が見つからない場合あり';meta.appendChild(small);
  const add=document.createElement('span');add.className='add';add.textContent=slots.some(x=>x?.name===actor.name)?'選択済み':'＋ 追加';
- b.append(img,meta,add);b.addEventListener('click',()=>{if(slots.some(x=>x?.name===actor.name)){searchStatus.textContent='この声優はすでに選択されています。';return;}pendingActor=actor;document.getElementById('modalTitle').textContent=`${actor.name}を${activeSlot+1}番目に追加`;document.getElementById('modalBack').style.display='flex';});return b;
+ b.append(img,meta,add);b.addEventListener('click',()=>{
+   if(slots.some(x=>x?.name===actor.name)){searchStatus.textContent=`エラー：${actor.name}はすでに登録されています。同じ人物は2回登録できません。`;return;}
+   slots[activeSlot]=actor;renderGrid();searchStatus.textContent=`${actor.name}を${activeSlot+1}番目に追加しました。`;
+ });
+ if(!actor.imageFound){const google=document.createElement('button');google.type='button';google.className='result';google.style.marginTop='-3px';google.style.padding='6px 10px';google.style.fontSize='.82rem';google.textContent='Google画像検索で写真を探す：'+actor.name;google.addEventListener('click',e=>{e.stopPropagation();window.open(actor.googleUrl,'_blank','noopener,noreferrer');});const wrap=document.createElement('div');wrap.append(b,google);return wrap;}
+ return b;
 }
-async function searchActors(query){
+async function searchActors(query, gender='all'){
  resultsEl.innerHTML='';searchStatus.textContent='検索中…';
- const names=query? [query,...popular.filter(n=>n.includes(query)||query.includes(n))].filter((n,i,a)=>a.indexOf(n)===i).slice(0,20):popular.slice(0,18);
+ const base=gender==='female'?popularFemale:gender==='male'?popularMale:popular;
+ const names=query? [query,...base.filter(n=>n.includes(query)||query.includes(n))].filter((n,i,a)=>a.indexOf(n)===i).slice(0,20):base.slice(0,27);
  if(query){
   try{
    const u='https://ja.wikipedia.org/w/api.php?action=query&list=search&srsearch='+encodeURIComponent(query+' 声優')+'&srnamespace=0&srlimit=12&format=json&origin=*';
@@ -162,13 +164,14 @@ async function searchActors(query){
  }
  const actors=await Promise.all(names.slice(0,24).map(getActor));
  actors.forEach(a=>resultsEl.appendChild(actorButton(a)));
- searchStatus.textContent=actors.length?`${actors.length}件の候補。追加したい声優を選んでください。`:'候補が見つかりませんでした。別の表記でも検索してください。';
+ searchStatus.textContent=actors.length?`${actors.length}件の候補。クリックすると選択中のマスに直接追加します。`:'候補が見つかりませんでした。別の表記でも検索してください。';
 }
+function refreshSuggestions(){const list=document.getElementById('voiceSuggestions');list.innerHTML='';const q=searchEl.value.trim();[...new Set(popular.filter(n=>!q||n.includes(q)||q.includes(n)))].slice(0,30).forEach(n=>{const o=document.createElement('option');o.value=n;list.appendChild(o);});}
 document.getElementById('searchBtn').addEventListener('click',()=>searchActors(searchEl.value.trim()));
+searchEl.addEventListener('input',()=>{refreshSuggestions();const q=searchEl.value.trim();if(q.length>=2)searchActors(q);});
 searchEl.addEventListener('keydown',e=>{if(e.key==='Enter')searchActors(searchEl.value.trim());});
-document.getElementById('popularBtn').addEventListener('click',()=>searchActors(''));
-document.getElementById('cancelModal').addEventListener('click',()=>document.getElementById('modalBack').style.display='none');
-document.getElementById('confirmModal').addEventListener('click',()=>{if(pendingActor){const old=slots.findIndex(x=>x?.name===pendingActor.name);if(old>=0)slots[old]=null;slots[activeSlot]=pendingActor;renderGrid();searchStatus.textContent=`${pendingActor.name}を${activeSlot+1}番目に追加しました。`;}document.getElementById('modalBack').style.display='none';});
+document.getElementById('popularFemaleBtn').addEventListener('click',()=>searchActors('','female'));
+document.getElementById('popularMaleBtn').addEventListener('click',()=>searchActors('','male'));
 document.getElementById('clearBtn').addEventListener('click',()=>{slots=Array(9).fill(null);renderGrid();document.getElementById('shareLink').style.display='none';});
 document.getElementById('shareBtn').addEventListener('click',()=>{const payload=slots.map(a=>a?.name||'');const url=new URL(location.href);url.hash='v1='+encodeURIComponent(JSON.stringify(payload));const input=document.getElementById('shareLink');input.value=url.href;input.style.display='block';input.select();try{document.execCommand('copy');document.getElementById('saveStatus').textContent='共有リンクを作成し、コピーを試みました。リンクを手動でコピーすることもできます。';}catch(e){document.getElementById('saveStatus').textContent='共有リンクを作成しました。コピーして共有してください。';}});
 document.getElementById('saveBtn').addEventListener('click',async()=>{
@@ -177,12 +180,12 @@ document.getElementById('saveBtn').addEventListener('click',async()=>{
   renderExport();await Promise.all([...document.querySelectorAll('#exportGrid img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;})));
   const stage=document.getElementById('exportStage');const canvas=document.createElement('canvas');canvas.width=900;canvas.height=1190;const ctx=canvas.getContext('2d');ctx.fillStyle='#f5f3ef';ctx.fillRect(0,0,900,1190);ctx.fillStyle='#242321';ctx.font='bold 32px sans-serif';ctx.textAlign='center';ctx.fillText('私を構成した9人の声優',450,52);
   const x0=30,y0=78,w=268,h=350,g=18;
-  for(let i=0;i<9;i++){let x=x0+(i%3)*(w+g),y=y0+Math.floor(i/3)*(h+g);ctx.fillStyle='#e8e5df';ctx.fillRect(x,y,w,h);let a=slots[i];if(a){try{const im=new Image();im.crossOrigin='anonymous';im.src=a.image;await new Promise(resolve=>{im.onload=resolve;im.onerror=resolve;});if(im.naturalWidth)ctx.drawImage(im,x,y,w,h*.76);}catch(e){}}ctx.fillStyle='#fff';ctx.fillRect(x,y+h*.76,w,h*.24);ctx.fillStyle='#242321';ctx.font='bold 20px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(a?.name||'未選択',x+w/2,y+h*.88,w-12);}
+  for(let i=0;i<9;i++){let x=x0+(i%3)*(w+g),y=y0+Math.floor(i/3)*(h+g);ctx.fillStyle='#e8e5df';ctx.fillRect(x,y,w,h);let a=slots[i];if(a){try{const im=new Image();im.crossOrigin='anonymous';im.src=a.image;await new Promise(resolve=>{im.onload=resolve;im.onerror=resolve;});if(im.naturalWidth){const dw=w,dh=h*.76,sw=im.naturalWidth,sh=im.naturalHeight,scale=Math.max(dw/sw,dh/sh),cw=dw/scale,ch=dh/scale,sx=(sw-cw)/2,sy=(sh-ch)/2;ctx.save();ctx.beginPath();ctx.rect(x,y,dw,dh);ctx.clip();ctx.drawImage(im,sx,sy,cw,ch,x,y,dw,dh);ctx.restore();}}catch(e){}}ctx.fillStyle='#fff';ctx.fillRect(x,y+h*.76,w,h*.24);ctx.fillStyle='#242321';ctx.font='bold 20px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(a?.name||'未選択',x+w/2,y+h*.88,w-12);}
   const a=document.createElement('a');a.download='私を構成した9人の声優.png';a.href=canvas.toDataURL('image/png');a.click();status.textContent='PNG画像を保存しました。画像が空白の場合は、画像元の制限が原因の可能性があります。';
  }catch(e){status.textContent='画像保存に失敗しました。ブラウザを更新して再度お試しください。'}
 });
 function loadShare(){if(location.hash.startsWith('#v1=')){try{const arr=JSON.parse(decodeURIComponent(location.hash.slice(4)));if(Array.isArray(arr)){Promise.all(arr.slice(0,9).map(n=>n?getActor(n):null)).then(a=>{slots=Array.from({length:9},(_,i)=>a[i]||null);renderGrid();});}}catch(e){}}}
-renderGrid();loadShare();searchActors('');
+renderGrid();loadShare();refreshSuggestions();searchActors('');
 </script>
 </body>
 </html>
