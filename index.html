@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#f5f3ef">
-<title>私を構成した9人の声優</title>
+<title>私を構成した9人の声優 v4</title>
 <style>
 :root{--bg:#f5f3ef;--panel:#fff;--ink:#242321;--muted:#77736e;--line:#dedad3;--accent:#e96b4b;--soft:#fbe8e1}
 *{box-sizing:border-box}
@@ -59,7 +59,7 @@ footer{text-align:center;padding:0 16px 28px;color:var(--muted);font-size:.8rem}
 <body>
 <header>
   <h1>私を構成した9人の声優</h1>
-  <p>あなたの「好き」を、3×3のマスに並べてみよう。</p>
+  <p>あなたの「好き」を、3×3のマスに並べてみよう。 <span style="font-size:.72rem;color:#888">v4</span></p>
 </header>
 <main>
   <section class="panel">
@@ -87,7 +87,7 @@ footer{text-align:center;padding:0 16px 28px;color:var(--muted);font-size:.8rem}
       <button id="popularFemaleBtn" class="secondary">人気声優（女性）</button>
       <button id="popularMaleBtn" class="secondary">人気声優（男性）</button>
     </div>
-    <p class="hint">写真が見つからない場合は「Google画像検索」から候補を確認できます。Google画像検索の写真を自動取得するにはAPIキー等が必要なため、このサイトでは検索結果へのリンクを表示します。</p>
+    <p class="hint">写真が見つからない場合は、Wikipediaの別表記・英語版・Wikimedia Commonsも自動で探します。見つからない場合は代替画像を表示します。</p>
   </section>
 </main>
 <footer>ファン向け試作ツール。写真の権利・利用条件は各掲載元に従ってください。</footer>
@@ -114,21 +114,80 @@ const placeholder = name => 'data:image/svg+xml;charset=UTF-8,'+encodeURICompone
 function escapeXml(s){return String(s).replace(/[<>&'"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]));}
 async function getActor(name){
  if(actorCache.has(name)) return actorCache.get(name);
- let actor={name, image:placeholder(name), page:'', imageFound:false, googleUrl:'https://www.google.com/search?tbm=isch&q='+encodeURIComponent(name+' 声優')};
+ let actor={name, image:placeholder(name), page:'', imageFound:false, imageSource:''};
+ const api = async (url) => {
+   const r = await fetch(url);
+   if(!r.ok) throw new Error('画像検索に失敗しました');
+   return await r.json();
+ };
+ const pageImage = async (wiki, title) => {
+   const url = 'https://' + wiki + '/w/api.php?action=query&prop=pageimages|info&titles='
+     + encodeURIComponent(title)
+     + '&piprop=thumbnail|original&pilicense=any&pithumbsize=500&inprop=url&format=json&origin=*';
+   const data = await api(url);
+   const pages = Object.values(data.query?.pages || {});
+   const p = pages.find(x => !x.missing && (x.thumbnail?.source || x.original?.source));
+   if(p){
+     actor.page = p.fullurl || ('https://' + wiki + '/wiki/' + encodeURIComponent(p.title.replace(/ /g,'_')));
+     actor.image = p.thumbnail?.source || p.original?.source;
+     actor.imageFound = !!actor.image;
+     actor.imageSource = wiki;
+     return true;
+   }
+   return false;
+ };
  try{
-   const url='https://ja.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch='+encodeURIComponent(name+' 声優')+'&gsrnamespace=0&gsrlimit=8&prop=pageimages|info&piprop=thumbnail&pithumbsize=360&inprop=url&format=json&origin=*';
-   const r=await fetch(url); if(!r.ok) throw new Error('Wikipedia API');
-   const data=await r.json(); const pages=Object.values(data.query?.pages||{});
-   const exact=pages.find(p=>p.title===name) || pages.find(p=>p.title.includes(name)) || pages[0];
-   if(exact){actor.page=exact.fullurl||('https://ja.wikipedia.org/wiki/'+encodeURIComponent(exact.title));if(exact.thumbnail?.source){actor.image=exact.thumbnail.source;actor.imageFound=true;}}
- }catch(e){}
+   // 先に人物記事の正確なタイトルを調べる。野島健児のような曖昧さ回避・括弧付き記事にも対応。
+   const titles = [...new Set([name, name+' (声優)', name+' (日本の声優)'])];
+   for(const title of titles){
+     if(await pageImage('ja.wikipedia.org', title)) break;
+   }
+   // 日本語版で画像が見つからない場合は、日本語版の記事検索から最も近い人物記事を探す。
+   if(!actor.imageFound){
+     const searchUrl='https://ja.wikipedia.org/w/api.php?action=query&list=search&srsearch='+encodeURIComponent('"'+name+'" 声優')+'&srnamespace=0&srlimit=8&format=json&origin=*';
+     const d=await api(searchUrl);
+     const pages=d.query?.search||[];
+     const preferred=pages.sort((a,b)=>{
+       const score=p=> (p.title===name?10:0)+(p.title.startsWith(name)?5:0)+(p.title.includes('声優')?2:0);
+       return score(b)-score(a);
+     });
+     for(const p of preferred){
+       if(await pageImage('ja.wikipedia.org', p.title)) break;
+     }
+   }
+   // 英語版にプロフィール写真があるケースも拾う（日本語版に写真がない人物向け）。
+   if(!actor.imageFound){
+     for(const title of [name, 'Kenji ' + name]){
+       if(await pageImage('en.wikipedia.org', title)) break;
+     }
+   }
+   // 最後にWikimedia Commons内の画像を自動検索。APIキー不要の公開エンドポイント。
+   if(!actor.imageFound){
+     const commonsUrl='https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch='+encodeURIComponent(name)+'&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url&iiurlwidth=500&format=json&origin=*';
+     const c=await api(commonsUrl);
+     const files=Object.values(c.query?.pages||{});
+     const imageFile=files.find(p=>{
+       const info=p.imageinfo?.[0];
+       return info && /\.(jpe?g|png|webp)$/i.test(p.title||'');
+     });
+     if(imageFile?.imageinfo?.[0]){
+       const info=imageFile.imageinfo[0];
+       actor.image=info.thumburl||info.url;
+       actor.imageFound=true;
+       actor.imageSource='Wikimedia Commons';
+       actor.page='https://commons.wikimedia.org/wiki/'+encodeURIComponent(imageFile.title.replace(/ /g,'_'));
+     }
+   }
+ }catch(e){
+   // 外部サイトが一時的に応答しない場合も、サイト自体は利用できるように代替画像を残す。
+ }
  actorCache.set(name,actor);return actor;
 }
 function renderGrid(){
  gridEl.innerHTML='';
  slots.forEach((actor,i)=>{
   const b=document.createElement('button'); b.className='slot '+(actor?'filled':'empty');b.type='button';b.setAttribute('aria-label',actor?`${i+1}番：${actor.name}`:`${i+1}番を選択`);
-  if(actor){b.innerHTML=`<span class="num">${i+1}</span><img alt=""><span class="name"></span><span class="remove" aria-label="削除">×</span>`;b.querySelector('img').src=actor.image;b.querySelector('.name').textContent=actor.name;b.querySelector('.remove').addEventListener('click',e=>{e.stopPropagation();slots[i]=null;renderGrid();});}
+  if(actor){b.innerHTML=`<span class="num">${i+1}</span><img alt=""><span class="name"></span><span class="remove" aria-label="削除">×</span>`;b.querySelector('img').src=actor.image;b.querySelector('img').onerror=()=>{b.querySelector('img').onerror=null;b.querySelector('img').src=placeholder(actor.name);};b.querySelector('.name').textContent=actor.name;b.querySelector('.remove').addEventListener('click',e=>{e.stopPropagation();slots[i]=null;renderGrid();});}
   else b.innerHTML=`<span class="num">${i+1}</span><span class="plus">＋</span><span>声優を選ぶ</span>`;
   b.addEventListener('click',()=>{activeSlot=i;document.querySelectorAll('.slot').forEach((x,j)=>x.style.outline=j===i?'3px solid #e96b4b':'');searchEl.focus();searchStatus.textContent=`${i+1}番目に追加する声優を検索してください。`;});
   gridEl.appendChild(b);
@@ -141,15 +200,14 @@ function renderExport(){
 }
 function actorButton(actor){
  const b=document.createElement('button');b.className='result';b.type='button';
- const img=document.createElement('img');img.src=actor.image;img.alt='';
+ const img=document.createElement('img');img.src=actor.image;img.alt='';img.onerror=()=>{img.onerror=null;img.src=placeholder(actor.name);};
  const meta=document.createElement('span');meta.className='meta';const strong=document.createElement('strong');strong.textContent=actor.name;meta.appendChild(strong);
- const small=document.createElement('small');small.textContent=actor.imageFound?'Wikipediaの写真':'写真が見つからない場合あり';meta.appendChild(small);
+ const small=document.createElement('small');small.textContent=actor.imageFound?`写真取得済み（${actor.imageSource||'Wikipedia'}）`:'写真なし・代替画像';meta.appendChild(small);
  const add=document.createElement('span');add.className='add';add.textContent=slots.some(x=>x?.name===actor.name)?'選択済み':'＋ 追加';
  b.append(img,meta,add);b.addEventListener('click',()=>{
    if(slots.some(x=>x?.name===actor.name)){searchStatus.textContent=`エラー：${actor.name}はすでに登録されています。同じ人物は2回登録できません。`;return;}
    slots[activeSlot]=actor;renderGrid();searchStatus.textContent=`${actor.name}を${activeSlot+1}番目に追加しました。`;
  });
- if(!actor.imageFound){const google=document.createElement('button');google.type='button';google.className='result';google.style.marginTop='-3px';google.style.padding='6px 10px';google.style.fontSize='.82rem';google.textContent='Google画像検索で写真を探す：'+actor.name;google.addEventListener('click',e=>{e.stopPropagation();window.open(actor.googleUrl,'_blank','noopener,noreferrer');});const wrap=document.createElement('div');wrap.append(b,google);return wrap;}
  return b;
 }
 async function searchActors(query, gender='all'){
@@ -184,7 +242,7 @@ document.getElementById('saveBtn').addEventListener('click',async()=>{
   const a=document.createElement('a');a.download='私を構成した9人の声優.png';a.href=canvas.toDataURL('image/png');a.click();status.textContent='PNG画像を保存しました。画像が空白の場合は、画像元の制限が原因の可能性があります。';
  }catch(e){status.textContent='画像保存に失敗しました。ブラウザを更新して再度お試しください。'}
 });
-function loadShare(){if(location.hash.startsWith('#v1=')){try{const arr=JSON.parse(decodeURIComponent(location.hash.slice(4)));if(Array.isArray(arr)){Promise.all(arr.slice(0,9).map(n=>n?getActor(n):null)).then(a=>{slots=Array.from({length:9},(_,i)=>a[i]||null);renderGrid();});}}catch(e){}}}
+function loadShare(){if(location.hash.startsWith('#v1=')){try{const arr=JSON.parse(decodeURIComponent(location.hash.slice(4)));if(Array.isArray(arr)){Promise.all(arr.slice(0,9).map(n=>n?getActor(n):null)).then(a=>{const seen=new Set();slots=Array.from({length:9},(_,i)=>{const actor=a[i];if(!actor||seen.has(actor.name))return null;seen.add(actor.name);return actor;});renderGrid();});}}catch(e){}}}
 renderGrid();loadShare();refreshSuggestions();searchActors('');
 </script>
 </body>
