@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f5f3ef">
+<title>私を構成した9人の声優</title>
+<style>
+:root{--bg:#f5f3ef;--panel:#fff;--ink:#242321;--muted:#77736e;--line:#dedad3;--accent:#e96b4b;--soft:#fbe8e1}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif}
+header{padding:28px 18px 18px;text-align:center}
+h1{font-size:clamp(1.45rem,4vw,2.2rem);margin:0 0 8px;letter-spacing:.03em}
+header p{color:var(--muted);margin:0;font-size:.93rem}
+main{max-width:1050px;margin:0 auto;padding:0 16px 44px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:20px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 5px 18px #32251408}
+.panel h2{font-size:1.05rem;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.slot{position:relative;aspect-ratio:3/4;border:2px dashed #d8d3cb;border-radius:12px;background:#f9f8f5;overflow:hidden;padding:0;cursor:pointer;color:var(--ink);display:flex;flex-direction:column;align-items:stretch;justify-content:center}
+.slot:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid #f1a18c;outline-offset:2px}
+.slot.empty{align-items:center;gap:6px;color:#8c867e}
+.slot .plus{font-size:1.8rem;line-height:1}
+.slot img{width:100%;height:76%;object-fit:cover;display:block;background:#e8e5df}
+.slot .name{min-height:24%;display:flex;align-items:center;justify-content:center;text-align:center;padding:5px 3px;font-size:clamp(.68rem,1.6vw,.9rem);font-weight:700;line-height:1.25;background:#fff;overflow-wrap:anywhere}
+.slot .num{position:absolute;top:6px;left:6px;background:#ffffffdc;border-radius:20px;padding:2px 7px;font-size:.72rem;font-weight:700}
+.slot .remove{position:absolute;right:5px;top:5px;width:25px;height:25px;border:0;border-radius:50%;background:#292724cc;color:#fff;font-size:16px;cursor:pointer;display:none}
+.slot.filled:hover .remove{display:block}
+.hint{color:var(--muted);font-size:.83rem;margin:12px 0 0}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+button,.file-label{font:inherit;border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 13px;cursor:pointer;color:var(--ink)}
+button.primary{background:var(--accent);border-color:var(--accent);color:white;font-weight:700}
+button:disabled{opacity:.45;cursor:not-allowed}
+.searchrow{display:flex;gap:8px}
+input[type=search],input[type=text],input[type=url]{width:100%;min-width:0;border:1px solid var(--line);border-radius:10px;padding:11px 12px;font:inherit;background:#fff;color:var(--ink)}
+.results{display:flex;flex-direction:column;gap:7px;margin-top:12px;max-height:450px;overflow:auto}
+.result{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:8px;border:1px solid #ece8e1;border-radius:12px;background:#fff}
+.result img{width:52px;height:60px;object-fit:cover;border-radius:7px;background:#eee9e2;flex-shrink:0}
+.result .meta{min-width:0;flex:1}
+.result .meta strong{display:block}
+.result .meta small{display:block;color:var(--muted);margin-top:3px}
+.result .add{font-size:.82rem;color:var(--accent);font-weight:700}
+.status{font-size:.85rem;color:var(--muted);margin-top:10px;min-height:1.3em}
+.secondary{background:#f7f5f1}
+#shareLink{margin-top:10px;display:none}
+footer{text-align:center;padding:0 16px 28px;color:var(--muted);font-size:.8rem}
+.modalback{position:fixed;inset:0;background:#16130fc4;display:none;align-items:center;justify-content:center;padding:18px;z-index:5}
+.modal{background:#fff;border-radius:16px;padding:20px;max-width:430px;width:100%}
+.modal h3{margin:0 0 12px}
+.modal .actions{justify-content:flex-end}
+#exportStage{position:fixed;left:-10000px;top:0;width:900px;background:#f5f3ef;padding:30px}
+.export-title{text-align:center;font-size:32px;font-weight:800;margin:0 0 22px}
+.export-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.export-cell{aspect-ratio:3/4;background:#e8e5df;overflow:hidden;border-radius:10px;display:flex;flex-direction:column}
+.export-cell img{width:100%;height:76%;object-fit:cover}
+.export-cell span{flex:1;display:flex;align-items:center;justify-content:center;background:white;padding:8px;text-align:center;font-size:23px;font-weight:700}
+@media(max-width:760px){main{grid-template-columns:1fr;padding:0 12px 30px;gap:12px}header{padding-top:22px}.panel{padding:14px}.slot{border-radius:9px}.slot .remove{display:block;width:22px;height:22px;font-size:14px}.results{max-height:340px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>私を構成した9人の声優</h1>
+  <p>あなたの「好き」を、3×3のマスに並べてみよう。</p>
+</header>
+<main>
+  <section class="panel">
+    <h2>あなたを構成する9人</h2>
+    <div class="grid" id="grid" aria-label="声優を選ぶ3×3グリッド"></div>
+    <p class="hint">マスを選んでから右側の候補を追加できます。写真はWikipediaから取得できる場合に表示されます。</p>
+    <div class="actions">
+      <button class="primary" id="saveBtn">画像を保存（PNG）</button>
+      <button id="shareBtn">共有リンクを作成</button>
+      <button id="clearBtn" class="secondary">すべてクリア</button>
+    </div>
+    <input id="shareLink" type="text" readonly aria-label="共有リンク">
+    <div class="status" id="saveStatus" role="status"></div>
+  </section>
+  <section class="panel">
+    <h2>声優を探す</h2>
+    <div class="searchrow">
+      <input id="search" type="search" placeholder="声優名で検索（例：花澤香菜）" autocomplete="off">
+      <button id="searchBtn" class="primary">検索</button>
+    </div>
+    <div class="status" id="searchStatus" role="status">候補から選ぶか、声優名を検索してください。</div>
+    <div class="results" id="results"></div>
+    <div class="actions">
+      <button id="popularBtn" class="secondary">人気声優の候補を表示</button>
+    </div>
+    <p class="hint">画像が表示されない場合は、Wikipediaに人物画像が登録されていない可能性があります。</p>
+  </section>
+</main>
+<footer>個人向けファンツールの試作版。写真の権利は各掲載元の利用条件に従ってください。</footer>
+<div class="modalback" id="modalBack">
+  <div class="modal">
+    <h3 id="modalTitle">マスを選択</h3>
+    <p>この位置に声優を追加します。すでに選択済みの声優は別の位置に移動します。</p>
+    <div class="actions">
+      <button id="cancelModal">キャンセル</button>
+      <button class="primary" id="confirmModal">この位置に追加</button>
+    </div>
+  </div>
+</div>
+<div id="exportStage" aria-hidden="true">
+  <div class="export-title">私を構成した9人の声優</div>
+  <div class="export-grid" id="exportGrid"></div>
+</div>
+<script>
+const popular = [
+"花澤香菜","早見沙織","悠木碧","沢城みゆき","釘宮理恵","水瀬いのり","上坂すみれ","佐倉綾音","雨宮天",
+"内田真礼","東山奈央","小倉唯","高橋李依","鬼頭明里","羊宮妃那","石見舞菜香","楠木ともり","伊藤美来",
+"中村悠一","杉田智和","神谷浩史","宮野真守","梶裕貴","松岡禎丞","花江夏樹","内山昂輝","岡本信彦",
+"小野大輔","津田健次郎","石田彰","子安武人","諏訪部順一","関智一","櫻井孝宏","福山潤","島﨑信長",
+"朴璐美","林原めぐみ","田村ゆかり","堀江由衣","坂本真綾","三石琴乃","緒方恵美","甲斐田裕子","大塚明夫"
+];
+const gridEl=document.getElementById('grid'), resultsEl=document.getElementById('results');
+const searchEl=document.getElementById('search'), searchStatus=document.getElementById('searchStatus');
+let slots=Array(9).fill(null), activeSlot=0, pendingActor=null, actorCache=new Map();
+const placeholder = name => 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="380" viewBox="0 0 300 380"><rect width="300" height="380" fill="#e8e5df"/><circle cx="150" cy="130" r="55" fill="#c8c1b7"/><path d="M48 330c6-82 47-122 102-122s96 40 102 122" fill="#c8c1b7"/><text x="150" y="365" font-size="17" text-anchor="middle" fill="#625c54">${escapeXml(name)}</text></svg>`);
+function escapeXml(s){return String(s).replace(/[<>&'"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]));}
+async function getActor(name){
+ if(actorCache.has(name)) return actorCache.get(name);
+ let actor={name, image:placeholder(name), page:''};
+ try{
+   const url='https://ja.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch='+encodeURIComponent(name+' 声優')+'&gsrnamespace=0&gsrlimit=8&prop=pageimages|info&piprop=thumbnail&pithumbsize=360&inprop=url&format=json&origin=*';
+   const r=await fetch(url); if(!r.ok) throw new Error('Wikipedia API');
+   const data=await r.json(); const pages=Object.values(data.query?.pages||{});
+   const exact=pages.find(p=>p.title===name) || pages.find(p=>p.title.includes(name)) || pages[0];
+   if(exact){actor.page=exact.fullurl||('https://ja.wikipedia.org/wiki/'+encodeURIComponent(exact.title));if(exact.thumbnail?.source)actor.image=exact.thumbnail.source;}
+ }catch(e){}
+ actorCache.set(name,actor);return actor;
+}
+function renderGrid(){
+ gridEl.innerHTML='';
+ slots.forEach((actor,i)=>{
+  const b=document.createElement('button'); b.className='slot '+(actor?'filled':'empty');b.type='button';b.setAttribute('aria-label',actor?`${i+1}番：${actor.name}`:`${i+1}番を選択`);
+  if(actor){b.innerHTML=`<span class="num">${i+1}</span><img alt=""><span class="name"></span><span class="remove" aria-label="削除">×</span>`;b.querySelector('img').src=actor.image;b.querySelector('.name').textContent=actor.name;b.querySelector('.remove').addEventListener('click',e=>{e.stopPropagation();slots[i]=null;renderGrid();});}
+  else b.innerHTML=`<span class="num">${i+1}</span><span class="plus">＋</span><span>声優を選ぶ</span>`;
+  b.addEventListener('click',()=>{activeSlot=i;document.querySelectorAll('.slot').forEach((x,j)=>x.style.outline=j===i?'3px solid #e96b4b':'');searchEl.focus();searchStatus.textContent=`${i+1}番目に追加する声優を検索してください。`;});
+  gridEl.appendChild(b);
+ });
+ renderExport();
+}
+function renderExport(){
+ const ex=document.getElementById('exportGrid');ex.innerHTML='';
+ slots.forEach(a=>{const cell=document.createElement('div');cell.className='export-cell';const img=document.createElement('img');img.src=a?.image||placeholder('未選択');img.crossOrigin='anonymous';img.alt='';const span=document.createElement('span');span.textContent=a?.name||'未選択';cell.append(img,span);ex.appendChild(cell);});
+}
+function actorButton(actor){
+ const b=document.createElement('button');b.className='result';b.type='button';
+ const img=document.createElement('img');img.src=actor.image;img.alt='';
+ const meta=document.createElement('span');meta.className='meta';const strong=document.createElement('strong');strong.textContent=actor.name;meta.appendChild(strong);
+ if(actor.page){const small=document.createElement('small');small.textContent='Wikipediaの人物ページあり';meta.appendChild(small);}
+ const add=document.createElement('span');add.className='add';add.textContent=slots.some(x=>x?.name===actor.name)?'選択済み':'＋ 追加';
+ b.append(img,meta,add);b.addEventListener('click',()=>{if(slots.some(x=>x?.name===actor.name)){searchStatus.textContent='この声優はすでに選択されています。';return;}pendingActor=actor;document.getElementById('modalTitle').textContent=`${actor.name}を${activeSlot+1}番目に追加`;document.getElementById('modalBack').style.display='flex';});return b;
+}
+async function searchActors(query){
+ resultsEl.innerHTML='';searchStatus.textContent='検索中…';
+ const names=query? [query,...popular.filter(n=>n.includes(query)||query.includes(n))].filter((n,i,a)=>a.indexOf(n)===i).slice(0,20):popular.slice(0,18);
+ if(query){
+  try{
+   const u='https://ja.wikipedia.org/w/api.php?action=query&list=search&srsearch='+encodeURIComponent(query+' 声優')+'&srnamespace=0&srlimit=12&format=json&origin=*';
+   const r=await fetch(u);const d=await r.json();for(const p of d.query?.search||[]){let n=p.title.replace(/ \(声優\)$/,'');if(!names.includes(n))names.push(n);}
+  }catch(e){}
+ }
+ const actors=await Promise.all(names.slice(0,24).map(getActor));
+ actors.forEach(a=>resultsEl.appendChild(actorButton(a)));
+ searchStatus.textContent=actors.length?`${actors.length}件の候補。追加したい声優を選んでください。`:'候補が見つかりませんでした。別の表記でも検索してください。';
+}
+document.getElementById('searchBtn').addEventListener('click',()=>searchActors(searchEl.value.trim()));
+searchEl.addEventListener('keydown',e=>{if(e.key==='Enter')searchActors(searchEl.value.trim());});
+document.getElementById('popularBtn').addEventListener('click',()=>searchActors(''));
+document.getElementById('cancelModal').addEventListener('click',()=>document.getElementById('modalBack').style.display='none');
+document.getElementById('confirmModal').addEventListener('click',()=>{if(pendingActor){const old=slots.findIndex(x=>x?.name===pendingActor.name);if(old>=0)slots[old]=null;slots[activeSlot]=pendingActor;renderGrid();searchStatus.textContent=`${pendingActor.name}を${activeSlot+1}番目に追加しました。`;}document.getElementById('modalBack').style.display='none';});
+document.getElementById('clearBtn').addEventListener('click',()=>{slots=Array(9).fill(null);renderGrid();document.getElementById('shareLink').style.display='none';});
+document.getElementById('shareBtn').addEventListener('click',()=>{const payload=slots.map(a=>a?.name||'');const url=new URL(location.href);url.hash='v1='+encodeURIComponent(JSON.stringify(payload));const input=document.getElementById('shareLink');input.value=url.href;input.style.display='block';input.select();try{document.execCommand('copy');document.getElementById('saveStatus').textContent='共有リンクを作成し、コピーを試みました。リンクを手動でコピーすることもできます。';}catch(e){document.getElementById('saveStatus').textContent='共有リンクを作成しました。コピーして共有してください。';}});
+document.getElementById('saveBtn').addEventListener('click',async()=>{
+ const status=document.getElementById('saveStatus');status.textContent='画像を作成しています…';
+ try{
+  renderExport();await Promise.all([...document.querySelectorAll('#exportGrid img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve;})));
+  const stage=document.getElementById('exportStage');const canvas=document.createElement('canvas');canvas.width=900;canvas.height=1190;const ctx=canvas.getContext('2d');ctx.fillStyle='#f5f3ef';ctx.fillRect(0,0,900,1190);ctx.fillStyle='#242321';ctx.font='bold 32px sans-serif';ctx.textAlign='center';ctx.fillText('私を構成した9人の声優',450,52);
+  const x0=30,y0=78,w=268,h=350,g=18;
+  for(let i=0;i<9;i++){let x=x0+(i%3)*(w+g),y=y0+Math.floor(i/3)*(h+g);ctx.fillStyle='#e8e5df';ctx.fillRect(x,y,w,h);let a=slots[i];if(a){try{const im=new Image();im.crossOrigin='anonymous';im.src=a.image;await new Promise(resolve=>{im.onload=resolve;im.onerror=resolve;});if(im.naturalWidth)ctx.drawImage(im,x,y,w,h*.76);}catch(e){}}ctx.fillStyle='#fff';ctx.fillRect(x,y+h*.76,w,h*.24);ctx.fillStyle='#242321';ctx.font='bold 20px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(a?.name||'未選択',x+w/2,y+h*.88,w-12);}
+  const a=document.createElement('a');a.download='私を構成した9人の声優.png';a.href=canvas.toDataURL('image/png');a.click();status.textContent='PNG画像を保存しました。画像が空白の場合は、画像元の制限が原因の可能性があります。';
+ }catch(e){status.textContent='画像保存に失敗しました。ブラウザを更新して再度お試しください。'}
+});
+function loadShare(){if(location.hash.startsWith('#v1=')){try{const arr=JSON.parse(decodeURIComponent(location.hash.slice(4)));if(Array.isArray(arr)){Promise.all(arr.slice(0,9).map(n=>n?getActor(n):null)).then(a=>{slots=Array.from({length:9},(_,i)=>a[i]||null);renderGrid();});}}catch(e){}}}
+renderGrid();loadShare();searchActors('');
+</script>
+</body>
+</html>
